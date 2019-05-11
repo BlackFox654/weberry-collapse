@@ -4,6 +4,10 @@
   "main": "dist/js/collapse.min.js",
   "author": "Mikhail Vedernikov <Mikhail.ved@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BlackFox654/weberry-collapse.git"
+  },
   "devDependencies": {
     "@babel/core": "^7.4.3",
     "@babel/preset-env": "^7.4.3",
