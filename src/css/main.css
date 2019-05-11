@@ -1,0 +1,26 @@
+.collapse {
+    overflow: hidden;
+    width: 500px;
+    background: aliceblue;
+    display: none;
+}
+
+.collapse.is-collapsing {
+    display: block;
+    transition: height 300ms linear;
+}
+
+.collapse.is-collapsed {
+    display: block;
+    height: auto;
+}
+
+.test .collapse{
+    float: left;
+}
+
+.test:after {
+    content: '';
+    clear: both;
+    display: block;
+}

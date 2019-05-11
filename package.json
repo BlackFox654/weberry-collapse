@@ -1,0 +1,31 @@
+{
+  "name": "weberry-collapse",
+  "version": "1.0.0",
+  "main": "dist/js/collapse.min.js",
+  "author": "Mikhail Vedernikov <Mikhail.ved@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.4.3",
+    "@babel/preset-env": "^7.4.3",
+    "autoprefixer": "^9.5.1",
+    "babelify": "^10.0.0",
+    "browser-sync": "^2.26.4",
+    "browserify": "^16.2.3",
+    "cssnano": "^4.1.10",
+    "del": "^4.1.0",
+    "gulp": "^4.0.1",
+    "gulp-postcss": "^8.0.0",
+    "gulp-rename": "^1.4.0",
+    "gulp-size": "^3.0.0",
+    "gulp-uglify": "^3.0.2",
+    "vinyl-buffer": "^1.0.1",
+    "vinyl-source-stream": "^2.0.0",
+    "yargs": "^13.2.2"
+  },
+  "scripts": {
+    "serve": "gulp serve",
+    "watch": "gulp watch",
+    "build:dev": "gulp",
+    "build:prod": "gulp --prod"
+  }
+}
