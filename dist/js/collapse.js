@@ -340,7 +340,7 @@ WeberryCollapse.prototype.bindShowTransitionFn = function () {
 WeberryCollapse.prototype.unBindShowTransitionFn = function () {
   var elem = this.elem,
       _p = this._p;
-  clearTimeout(_p._showTimeout);
+  clearTimeout(_p.showTimeout);
   elem.removeEventListener(_p.transitionEvent, _p.showTransitionFn);
 };
 
@@ -353,7 +353,7 @@ WeberryCollapse.prototype.bindHideTransitionFn = function () {
 WeberryCollapse.prototype.unBindHideTransitionFn = function () {
   var elem = this.elem,
       _p = this._p;
-  clearTimeout(_p._hideTimeout);
+  clearTimeout(_p.hideTimeout);
   elem.removeEventListener(_p.transitionEvent, _p.hideTransitionFn);
 };
 
