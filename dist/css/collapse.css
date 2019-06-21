@@ -26,3 +26,7 @@
     clear: both;
     display: block;
 }
+
+button[data-open='true'] {
+    background: aqua;
+}

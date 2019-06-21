@@ -1,10 +1,6 @@
-import { addClass, removeClass, whichTransitionEvent } from './utils';
+import { addClass, removeClass } from './utils';
 
-const transitionEvent = whichTransitionEvent();
-
-/**
- *  Default options
- */
+import { transitionAnimate } from './utils';
 
 const defaultOptions = {
   collapsingClass: 'is-collapsing',
@@ -50,18 +46,17 @@ class WeberryCollapse {
     this.heightInitial = null;
     this.heightFinal = null;
     
+    this.name = elem.getAttribute('id');
+    
     this.toggleElems = [];
+    
+    this.animationShow = null;
+    this.animationHide = null;
     
     //---------------------------------PRIVATE DATA------------------------------------
     
     this._p = {
-      transitionEvent: transitionEvent,
-      showTimeout: null,
-      hideTimeout: null,
-      showTransitionFn: null,
-      hideTransitionFn: null,
       toggleListener: null,
-      
       eventsTag: 0,
       events: {}
     };
@@ -74,60 +69,6 @@ class WeberryCollapse {
   prepareToShow () {
     this.heightInitial = this.elem.offsetHeight;
     this.heightFinal = this.options.calcHeightShowFn();
-  }
-  
-  show () {
-    const {hideInProgress, options} = this;
-    
-    if (options.handlerBeforeShow() === false) {
-      return;
-    }
-    
-    if (!hideInProgress) {
-      this.prepareToShow();
-    }
-    
-    if (this.heightInitial >= this.heightFinal) {
-      return;
-    }
-    
-    this.isOpen = true;
-    this.toggleElemsSetState(true);
-    
-    /**
-     *  Call listeners event SHOW
-     */
-    
-    this.elem.dispatchEvent(eventShow);
-    options.handlerShow();
-  
-    this.animateShow();
-  }
-  
-  hide () {
-    const {elem, options} = this;
-    
-    if (options.handlerBeforeHide() === false) {
-      return;
-    }
-    
-    if (elem.offsetHeight <= this.heightInitial) {
-      return;
-    }
-    
-    removeClass(elem, options['collapsedClass']);
-    
-    this.isOpen = false;
-    this.toggleElemsSetState(false);
-    
-    /**
-     *  Call listeners event HIDE
-     */
-    
-    elem.dispatchEvent(eventHide);
-    options.handlerHide();
-    
-    this.animateHide();
   }
   
   setCalcHeightShowFn (fn = this.calcHeightDefault.bind(this)) {
@@ -152,49 +93,6 @@ class WeberryCollapse {
     this.isOpen ? this.hide() : this.show();
   }
   
-  toggleElemsInit () {
-    const {elem, isOpen, options, _p} = this;
-    
-    let toggleElems;
-    
-    const target = elem.getAttribute('id');
-    
-    toggleElems = Array.from(document.querySelectorAll(`[href="#${target}"],[data-target="#${target}"]`));
-    
-    const toggleListener = (e) => {
-      e.preventDefault();
-      this.toggle();
-    };
-    
-    _p.toggleListener = toggleListener;
-    
-    toggleElems.forEach(toggleElem => {
-      toggleElem.setAttribute(options.toggleData, isOpen);
-      
-      toggleElem.addEventListener('click', toggleListener);
-    });
-    
-    this.toggleElems = toggleElems;
-    
-  }
-  
-  toggleElemsDestroy () {
-    const {toggleElems, _p, options} = this;
-    
-    toggleElems.forEach(toggleElem => {
-      toggleElem.removeAttribute(options.toggleData);
-      toggleElem.removeEventListener('click', _p.toggleListener);
-    });
-  }
-  
-  toggleElemsSetState (state) {
-    const {options, toggleElems} = this;
-    
-    toggleElems.forEach(toggleElem => {
-      toggleElem.setAttribute(options.toggleData, state);
-    });
-  }
-  
   init () {
     if (this.options.calcHeightShowFn) {
       this.setCalcHeightShowFn(this.options.calcHeightShowFn);
@@ -202,28 +100,24 @@ class WeberryCollapse {
       this.setCalcHeightShowFn();
     }
     
-    if(this.isOpen) {
-      removeClass(this.elem, this.options['collapsedClass']);
+    if (this.isOpen) {
       this.prepareToShow();
       addClass(this.elem, this.options['collapsedClass']);
     }
-    
-    this.setShowTransitionFn();
-    this.setHideTransitionFn();
     
     this.toggleElemsInit();
   }
   
   destroy () {
     const {options, elem} = this;
+  
+    this.destroyAnimationShow();
+    this.destroyAnimationHide();
     
     this.clearEvents();
     
     this.toggleElemsDestroy();
     this.resetClassList();
-    
-    this.unBindShowTransitionFn();
-    this.unBindHideTransitionFn();
     
     options.handlerDestroy(elem);
     
@@ -237,194 +131,243 @@ class WeberryCollapse {
   
   reset () {
     const {options: {openInitially}} = this;
-    
-    this.isOpen = openInitially;
-    
+  
     this.showInProgress = false;
     this.hideInProgress = false;
+    
+    this.destroyAnimationShow();
+    this.destroyAnimationHide();
+    
+    this.isOpen = openInitially;
     
     this.setCalcHeightShowFn();
     
     this.toggleElemsSetState(openInitially);
     
-    this.unBindShowTransitionFn();
-    this.unBindHideTransitionFn();
-    
-    
-    if(openInitially) {
-    
+    if (openInitially) {
+      
       this.elem.style.display = '';
       this.elem.style.height = '';
-    
+      
       removeClass(this.elem, this.options['collapsingClass']);
       addClass(this.elem, this.options['collapsedClass']);
-    
+      
     } else {
-    
       this.resetClassList();
+    }
+  }
+  
+  show () {
+    const {hideInProgress, showInProgress, options, elem} = this;
     
+    if (options.handlerBeforeShow() === false) {
+      return;
     }
     
+    if (!showInProgress && !hideInProgress) {
+      this.prepareToShow();
+    }
+    
+    if (this.heightInitial >= this.heightFinal) {
+      return;
+    }
+    
+    this.showInProgress = true;
+    
+    this.isOpen = true;
+    this.toggleElemsSetState(true);
+    
+    this.elem.dispatchEvent(eventShow);
+    options.handlerShow();
+    
+    if (this.hideInProgress && elem.offsetHeight === this.heightInitial) {
+      return;
+    }
+    
+    this.animateShow();
+  }
+  
+  hide () {
+    const {elem, options, showInProgress} = this;
+    
+    if (options.handlerBeforeHide() === false || elem.offsetHeight <= this.heightInitial) {
+      return;
+    }
+    
+    removeClass(elem, options['collapsedClass']);
+    
+    this.hideInProgress = true;
+    
+    this.isOpen = false;
+    this.toggleElemsSetState(false);
+    
+    elem.dispatchEvent(eventHide);
+    options.handlerHide();
+    
+    if (showInProgress && elem.offsetHeight === this.heightFinal) {
+      return;
+    }
+    
+    this.animateHide();
+  }
+  
+  animateShow () {
+    const {elem, options} = this;
+    
+    const _self = this;
+    
+    const onComplete = () => {
+      removeClass(elem, options['collapsingClass']);
+      addClass(elem, options['collapsedClass']);
+      
+      if (options.clearHeightShown) {
+        elem.style.height = '';
+      }
+      
+      _self.showInProgress = false;
+      
+      elem.dispatchEvent(eventShown);
+      options.handlerShown();
+      
+      if (_self.hideInProgress) {
+        _self.hideInProgress = false;
+        _self.hide();
+      }
+    };
+    
+    if (this.hideInProgress) {
+      
+      this.destroyAnimationHide();
+      
+      this.hideInProgress = false;
+      
+      this.animationShow = transitionAnimate(elem, {
+        immediately: true,
+        animation () {
+          elem.style.height = _self.heightFinal + 'px';
+        },
+        onComplete
+      });
+      
+    } else {
+      
+      this.animationShow = transitionAnimate(elem, {
+        beforeStart () {
+          elem.style.height = _self.heightInitial + 'px';
+    
+          addClass(elem, options['collapsingClass']);
+        },
+        animation () {
+          elem.style.height = _self.heightFinal + 'px';
+        },
+        onComplete
+      });
+    }
+  }
+  
+  animateHide () {
+    const _self = this;
+    
+    const {elem, options} = this;
+    
+    const onComplete = () => {
+      removeClass(elem, options['collapsingClass']);
+      elem.style.height = '';
+      
+      _self.hideInProgress = false;
+      
+      elem.dispatchEvent(eventHidden);
+      options.handlerHidden();
+      
+      if (_self.showInProgress) {
+        _self.showInProgress = false;
+        _self.show();
+      }
+    };
+    
+    if (this.showInProgress) {
+      
+      this.destroyAnimationShow();
+      
+      this.showInProgress = false;
+      
+      this.animationHide = transitionAnimate(elem, {
+        immediately: true,
+        animation () {
+          elem.style.height = _self.heightInitial + 'px';
+        },
+        onComplete
+      });
+      
+    } else {
+      
+      this.animationHide = transitionAnimate(elem, {
+        beforeStart () {
+          elem.style.height = _self.heightFinal + 'px';
+          
+          addClass(elem, _self.options['collapsingClass']);
+        },
+        animation () {
+          elem.style.height = _self.heightInitial + 'px';
+        },
+        onComplete
+      });
+    }
   }
 }
 
+//---------------------------------Toggle Functions------------------------------------
+
+WeberryCollapse.prototype.toggleElemsInit = function () {
+  const {isOpen, options, _p, name} = this;
+  
+  const targetName = name;
+  
+  let toggleElems = Array.from(document.querySelectorAll(`[href="#${targetName}"],[data-target="#${targetName}"]`));
+  
+  const toggleListener = (e) => {
+    e.preventDefault();
+    this.toggle();
+  };
+  
+  _p.toggleListener = toggleListener;
+  
+  toggleElems.forEach(toggleElem => {
+    toggleElem.setAttribute(options.toggleData, isOpen);
+    
+    toggleElem.addEventListener('click', toggleListener);
+  });
+  
+  this.toggleElems = toggleElems;
+};
+
+WeberryCollapse.prototype.toggleElemsSetState = function (state) {
+  const {options, toggleElems} = this;
+  
+  toggleElems.forEach(toggleElem => {
+    toggleElem.setAttribute(options.toggleData, state);
+  });
+};
+
+WeberryCollapse.prototype.toggleElemsDestroy = function () {
+  const {toggleElems, _p, options} = this;
+  
+  toggleElems.forEach(toggleElem => {
+    toggleElem.removeAttribute(options.toggleData);
+    toggleElem.removeEventListener('click', _p.toggleListener);
+  });
+};
+
 //---------------------------------ANIMATE FUNCTIONS ------------------------------------
 
-WeberryCollapse.prototype.animateShow = function () {
-  const {elem, _p} = this;
-  
-  if(this.hideInProgress) {
-    this.unBindShowTransitionFn();
-    this.unBindHideTransitionFn();
-  }
-  
-  this.showInProgress = true;
-  this.hideInProgress = false;
-  
-  /**
-   * Set the height at which the animation begins
-   */
-  
-  if(!this.hideInProgress) {
-    elem.style.height = this.heightInitial + 'px';
-  }
-  
-  this.bindShowTransitionFn();
-  
-  if(this.hideInProgress) {
-    
-    this.hideInProgress = false;
-    elem.style.height = this.heightFinal + 'px';
-    
-  } else {
-    
-    addClass(elem, this.options['collapsingClass']);
-  
-    _p.showTimeout = setTimeout(() => {
-      elem.style.height = this.heightFinal + 'px';
-    }, 50);
-  
-  }
-  
+WeberryCollapse.prototype.destroyAnimationShow = function () {
+  const {animationShow} = this;
+  animationShow && animationShow.destroy && animationShow.destroy();
 };
 
-WeberryCollapse.prototype.animateHide = function () {
-  const {elem, _p} = this;
-  
-  if(this.showInProgress) {
-    this.unBindShowTransitionFn();
-    this.unBindHideTransitionFn();
-  }
-  
-  this.showInProgress = false;
-  this.hideInProgress = true;
-  
-  /**
-   * Set the height at which the animation begins
-   */
-  
-  elem.style.height = this.heightFinal + 'px';
-  
-  this.bindHideTransitionFn();
-  
-  if(this.showInProgress) {
-    
-    this.showInProgress = false;
-    elem.style.height = this.heightInitial + 'px';
-  
-  } else {
-  
-    addClass(elem, this.options['collapsingClass']);
-  
-    _p.hideTimeout = setTimeout(() => {
-      elem.style.height = this.heightInitial + 'px';
-    }, 50);
-  
-  }
-};
-
-//---------------------------------TRANSITION END EVENT FUNCTIONS ------------------------------------
-
-WeberryCollapse.prototype.bindShowTransitionFn = function () {
-  const {elem, _p} = this;
-  elem.addEventListener(_p.transitionEvent, _p.showTransitionFn);
-};
-
-WeberryCollapse.prototype.unBindShowTransitionFn = function () {
-  const {elem, _p} = this;
-  clearTimeout(_p.showTimeout);
-  elem.removeEventListener(_p.transitionEvent, _p.showTransitionFn);
-};
-
-WeberryCollapse.prototype.bindHideTransitionFn = function () {
-  const {elem, _p} = this;
-  elem.addEventListener(_p.transitionEvent, _p.hideTransitionFn);
-};
-
-WeberryCollapse.prototype.unBindHideTransitionFn = function () {
-  const {elem, _p} = this;
-  clearTimeout(_p.hideTimeout);
-  elem.removeEventListener(_p.transitionEvent, _p.hideTransitionFn);
-};
-
-WeberryCollapse.prototype.setShowTransitionFn = function () {
-  const {elem, options, _p} = this;
-  _p.showTransitionFn = () => {
-  
-    /**
-     * Checking if current height of elem not equal final height
-     */
-    
-    if(this.elem.offsetHeight !== this.heightFinal) {
-      return;
-    }
-  
-    elem.removeEventListener(_p.transitionEvent, _p.showTransitionFn);
-    
-    removeClass(elem, options['collapsingClass']);
-    addClass(elem, options['collapsedClass']);
-    
-    if (options.clearHeightShown) {
-      elem.style.height = '';
-    }
-    
-    this.showInProgress = false;
-  
-    /**
-     *  Call listeners event SHOWN
-     */
-    
-    elem.dispatchEvent(eventShown);
-    options.handlerShown();
-  };
-};
-
-WeberryCollapse.prototype.setHideTransitionFn = function () {
-  const {elem, options, _p} = this;
-  _p.hideTransitionFn = () => {
-    
-    /**
-     * Checking if current height of elem not equal initial height
-     */
-    
-    if(this.elem.offsetHeight !== this.heightInitial) {
-      return;
-    }
-    
-    elem.removeEventListener(_p.transitionEvent, _p.hideTransitionFn);
-    
-    removeClass(elem, options['collapsingClass']);
-    elem.style.height = '';
-    
-    this.hideInProgress = false;
-  
-    /**
-     *  Call listeners event HIDDEN
-     */
-    
-    elem.dispatchEvent(eventHidden);
-    options.handlerHidden();
-  };
+WeberryCollapse.prototype.destroyAnimationHide = function () {
+  const {animationHide} = this;
+  animationHide && animationHide.destroy && animationHide.destroy();
 };
 
 //---------------------------------CUSTOM EVENTS------------------------------------
@@ -442,7 +385,6 @@ const eventShown = new CustomEvent(eventMap.shown);
 const eventHide = new CustomEvent(eventMap.hide);
 const eventHidden = new CustomEvent(eventMap.hidden);
 
-
 WeberryCollapse.prototype.clearEvents = function () {
   const {_p: {events}} = this;
   
@@ -457,7 +399,7 @@ WeberryCollapse.prototype.clearEvents = function () {
   this._p.eventsTag = 0;
 };
 
-WeberryCollapse.prototype.on = function(event, fn) {
+WeberryCollapse.prototype.on = function (event, fn) {
   const {_p} = this;
   _p.events[`event${_p.eventsTag}`] = {
     event,
@@ -469,7 +411,7 @@ WeberryCollapse.prototype.on = function(event, fn) {
   this.elem.addEventListener(eventMap[event], fn);
 };
 
-WeberryCollapse.prototype.off = function(event, fn) {
+WeberryCollapse.prototype.off = function (event, fn) {
   this.elem.removeEventListener(eventMap[event], fn);
 };
 

@@ -14,11 +14,6 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
-var transitionEvent = (0, _utils.whichTransitionEvent)();
-/**
- *  Default options
- */
-
 var defaultOptions = {
   collapsingClass: 'is-collapsing',
   collapsedClass: 'is-collapsed',
@@ -57,14 +52,12 @@ function () {
     this.hideInProgress = false;
     this.heightInitial = null;
     this.heightFinal = null;
-    this.toggleElems = []; //---------------------------------PRIVATE DATA------------------------------------
+    this.name = elem.getAttribute('id');
+    this.toggleElems = [];
+    this.animationShow = null;
+    this.animationHide = null; //---------------------------------PRIVATE DATA------------------------------------
 
     this._p = {
-      transitionEvent: transitionEvent,
-      showTimeout: null,
-      hideTimeout: null,
-      showTransitionFn: null,
-      hideTransitionFn: null,
       toggleListener: null,
       eventsTag: 0,
       events: {}
@@ -78,59 +71,6 @@ function () {
     value: function prepareToShow() {
       this.heightInitial = this.elem.offsetHeight;
       this.heightFinal = this.options.calcHeightShowFn();
-    }
-  }, {
-    key: "show",
-    value: function show() {
-      var hideInProgress = this.hideInProgress,
-          options = this.options;
-
-      if (options.handlerBeforeShow() === false) {
-        return;
-      }
-
-      if (!hideInProgress) {
-        this.prepareToShow();
-      }
-
-      if (this.heightInitial >= this.heightFinal) {
-        return;
-      }
-
-      this.isOpen = true;
-      this.toggleElemsSetState(true);
-      /**
-       *  Call listeners event SHOW
-       */
-
-      this.elem.dispatchEvent(eventShow);
-      options.handlerShow();
-      this.animateShow();
-    }
-  }, {
-    key: "hide",
-    value: function hide() {
-      var elem = this.elem,
-          options = this.options;
-
-      if (options.handlerBeforeHide() === false) {
-        return;
-      }
-
-      if (elem.offsetHeight <= this.heightInitial) {
-        return;
-      }
-
-      (0, _utils.removeClass)(elem, options['collapsedClass']);
-      this.isOpen = false;
-      this.toggleElemsSetState(false);
-      /**
-       *  Call listeners event HIDE
-       */
-
-      elem.dispatchEvent(eventHide);
-      options.handlerHide();
-      this.animateHide();
     }
   }, {
     key: "setCalcHeightShowFn",
@@ -155,52 +95,6 @@ function () {
       this.isOpen ? this.hide() : this.show();
     }
   }, {
-    key: "toggleElemsInit",
-    value: function toggleElemsInit() {
-      var _this = this;
-
-      var elem = this.elem,
-          isOpen = this.isOpen,
-          options = this.options,
-          _p = this._p;
-      var toggleElems;
-      var target = elem.getAttribute('id');
-      toggleElems = Array.from(document.querySelectorAll("[href=\"#".concat(target, "\"],[data-target=\"#").concat(target, "\"]")));
-
-      var toggleListener = function toggleListener(e) {
-        e.preventDefault();
-
-        _this.toggle();
-      };
-
-      _p.toggleListener = toggleListener;
-      toggleElems.forEach(function (toggleElem) {
-        toggleElem.setAttribute(options.toggleData, isOpen);
-        toggleElem.addEventListener('click', toggleListener);
-      });
-      this.toggleElems = toggleElems;
-    }
-  }, {
-    key: "toggleElemsDestroy",
-    value: function toggleElemsDestroy() {
-      var toggleElems = this.toggleElems,
-          _p = this._p,
-          options = this.options;
-      toggleElems.forEach(function (toggleElem) {
-        toggleElem.removeAttribute(options.toggleData);
-        toggleElem.removeEventListener('click', _p.toggleListener);
-      });
-    }
-  }, {
-    key: "toggleElemsSetState",
-    value: function toggleElemsSetState(state) {
-      var options = this.options,
-          toggleElems = this.toggleElems;
-      toggleElems.forEach(function (toggleElem) {
-        toggleElem.setAttribute(options.toggleData, state);
-      });
-    }
-  }, {
     key: "init",
     value: function init() {
       if (this.options.calcHeightShowFn) {
@@ -210,13 +104,10 @@ function () {
       }
 
       if (this.isOpen) {
-        (0, _utils.removeClass)(this.elem, this.options['collapsedClass']);
         this.prepareToShow();
         (0, _utils.addClass)(this.elem, this.options['collapsedClass']);
       }
 
-      this.setShowTransitionFn();
-      this.setHideTransitionFn();
       this.toggleElemsInit();
     }
   }, {
@@ -224,11 +115,11 @@ function () {
     value: function destroy() {
       var options = this.options,
           elem = this.elem;
+      this.destroyAnimationShow();
+      this.destroyAnimationHide();
       this.clearEvents();
       this.toggleElemsDestroy();
       this.resetClassList();
-      this.unBindShowTransitionFn();
-      this.unBindHideTransitionFn();
       options.handlerDestroy(elem);
       delete elem.WeberryCollapse;
     }
@@ -242,13 +133,13 @@ function () {
     key: "reset",
     value: function reset() {
       var openInitially = this.options.openInitially;
-      this.isOpen = openInitially;
       this.showInProgress = false;
       this.hideInProgress = false;
+      this.destroyAnimationShow();
+      this.destroyAnimationHide();
+      this.isOpen = openInitially;
       this.setCalcHeightShowFn();
       this.toggleElemsSetState(openInitially);
-      this.unBindShowTransitionFn();
-      this.unBindHideTransitionFn();
 
       if (openInitially) {
         this.elem.style.display = '';
@@ -259,163 +150,214 @@ function () {
         this.resetClassList();
       }
     }
+  }, {
+    key: "show",
+    value: function show() {
+      var hideInProgress = this.hideInProgress,
+          showInProgress = this.showInProgress,
+          options = this.options,
+          elem = this.elem;
+
+      if (options.handlerBeforeShow() === false) {
+        return;
+      }
+
+      if (!showInProgress && !hideInProgress) {
+        this.prepareToShow();
+      }
+
+      if (this.heightInitial >= this.heightFinal) {
+        return;
+      }
+
+      this.showInProgress = true;
+      this.isOpen = true;
+      this.toggleElemsSetState(true);
+      this.elem.dispatchEvent(eventShow);
+      options.handlerShow();
+
+      if (this.hideInProgress && elem.offsetHeight === this.heightInitial) {
+        return;
+      }
+
+      this.animateShow();
+    }
+  }, {
+    key: "hide",
+    value: function hide() {
+      var elem = this.elem,
+          options = this.options,
+          showInProgress = this.showInProgress;
+
+      if (options.handlerBeforeHide() === false || elem.offsetHeight <= this.heightInitial) {
+        return;
+      }
+
+      (0, _utils.removeClass)(elem, options['collapsedClass']);
+      this.hideInProgress = true;
+      this.isOpen = false;
+      this.toggleElemsSetState(false);
+      elem.dispatchEvent(eventHide);
+      options.handlerHide();
+
+      if (showInProgress && elem.offsetHeight === this.heightFinal) {
+        return;
+      }
+
+      this.animateHide();
+    }
+  }, {
+    key: "animateShow",
+    value: function animateShow() {
+      var elem = this.elem,
+          options = this.options;
+
+      var _self = this;
+
+      var onComplete = function onComplete() {
+        (0, _utils.removeClass)(elem, options['collapsingClass']);
+        (0, _utils.addClass)(elem, options['collapsedClass']);
+
+        if (options.clearHeightShown) {
+          elem.style.height = '';
+        }
+
+        _self.showInProgress = false;
+        elem.dispatchEvent(eventShown);
+        options.handlerShown();
+
+        if (_self.hideInProgress) {
+          _self.hideInProgress = false;
+
+          _self.hide();
+        }
+      };
+
+      if (this.hideInProgress) {
+        this.destroyAnimationHide();
+        this.hideInProgress = false;
+        this.animationShow = (0, _utils.transitionAnimate)(elem, {
+          immediately: true,
+          animation: function animation() {
+            elem.style.height = _self.heightFinal + 'px';
+          },
+          onComplete: onComplete
+        });
+      } else {
+        this.animationShow = (0, _utils.transitionAnimate)(elem, {
+          beforeStart: function beforeStart() {
+            elem.style.height = _self.heightInitial + 'px';
+            (0, _utils.addClass)(elem, options['collapsingClass']);
+          },
+          animation: function animation() {
+            elem.style.height = _self.heightFinal + 'px';
+          },
+          onComplete: onComplete
+        });
+      }
+    }
+  }, {
+    key: "animateHide",
+    value: function animateHide() {
+      var _self = this;
+
+      var elem = this.elem,
+          options = this.options;
+
+      var onComplete = function onComplete() {
+        (0, _utils.removeClass)(elem, options['collapsingClass']);
+        elem.style.height = '';
+        _self.hideInProgress = false;
+        elem.dispatchEvent(eventHidden);
+        options.handlerHidden();
+
+        if (_self.showInProgress) {
+          _self.showInProgress = false;
+
+          _self.show();
+        }
+      };
+
+      if (this.showInProgress) {
+        this.destroyAnimationShow();
+        this.showInProgress = false;
+        this.animationHide = (0, _utils.transitionAnimate)(elem, {
+          immediately: true,
+          animation: function animation() {
+            elem.style.height = _self.heightInitial + 'px';
+          },
+          onComplete: onComplete
+        });
+      } else {
+        this.animationHide = (0, _utils.transitionAnimate)(elem, {
+          beforeStart: function beforeStart() {
+            elem.style.height = _self.heightFinal + 'px';
+            (0, _utils.addClass)(elem, _self.options['collapsingClass']);
+          },
+          animation: function animation() {
+            elem.style.height = _self.heightInitial + 'px';
+          },
+          onComplete: onComplete
+        });
+      }
+    }
   }]);
 
   return WeberryCollapse;
-}(); //---------------------------------ANIMATE FUNCTIONS ------------------------------------
+}(); //---------------------------------Toggle Functions------------------------------------
 
 
-WeberryCollapse.prototype.animateShow = function () {
-  var _this2 = this;
+WeberryCollapse.prototype.toggleElemsInit = function () {
+  var _this = this;
 
-  var elem = this.elem,
-      _p = this._p;
-
-  if (this.hideInProgress) {
-    this.unBindShowTransitionFn();
-    this.unBindHideTransitionFn();
-  }
-
-  this.showInProgress = true;
-  this.hideInProgress = false;
-  /**
-   * Set the height at which the animation begins
-   */
-
-  if (!this.hideInProgress) {
-    elem.style.height = this.heightInitial + 'px';
-  }
-
-  this.bindShowTransitionFn();
-
-  if (this.hideInProgress) {
-    this.hideInProgress = false;
-    elem.style.height = this.heightFinal + 'px';
-  } else {
-    (0, _utils.addClass)(elem, this.options['collapsingClass']);
-    _p.showTimeout = setTimeout(function () {
-      elem.style.height = _this2.heightFinal + 'px';
-    }, 50);
-  }
-};
-
-WeberryCollapse.prototype.animateHide = function () {
-  var _this3 = this;
-
-  var elem = this.elem,
-      _p = this._p;
-
-  if (this.showInProgress) {
-    this.unBindShowTransitionFn();
-    this.unBindHideTransitionFn();
-  }
-
-  this.showInProgress = false;
-  this.hideInProgress = true;
-  /**
-   * Set the height at which the animation begins
-   */
-
-  elem.style.height = this.heightFinal + 'px';
-  this.bindHideTransitionFn();
-
-  if (this.showInProgress) {
-    this.showInProgress = false;
-    elem.style.height = this.heightInitial + 'px';
-  } else {
-    (0, _utils.addClass)(elem, this.options['collapsingClass']);
-    _p.hideTimeout = setTimeout(function () {
-      elem.style.height = _this3.heightInitial + 'px';
-    }, 50);
-  }
-}; //---------------------------------TRANSITION END EVENT FUNCTIONS ------------------------------------
-
-
-WeberryCollapse.prototype.bindShowTransitionFn = function () {
-  var elem = this.elem,
-      _p = this._p;
-  elem.addEventListener(_p.transitionEvent, _p.showTransitionFn);
-};
-
-WeberryCollapse.prototype.unBindShowTransitionFn = function () {
-  var elem = this.elem,
-      _p = this._p;
-  clearTimeout(_p.showTimeout);
-  elem.removeEventListener(_p.transitionEvent, _p.showTransitionFn);
-};
-
-WeberryCollapse.prototype.bindHideTransitionFn = function () {
-  var elem = this.elem,
-      _p = this._p;
-  elem.addEventListener(_p.transitionEvent, _p.hideTransitionFn);
-};
-
-WeberryCollapse.prototype.unBindHideTransitionFn = function () {
-  var elem = this.elem,
-      _p = this._p;
-  clearTimeout(_p.hideTimeout);
-  elem.removeEventListener(_p.transitionEvent, _p.hideTransitionFn);
-};
-
-WeberryCollapse.prototype.setShowTransitionFn = function () {
-  var _this4 = this;
-
-  var elem = this.elem,
+  var isOpen = this.isOpen,
       options = this.options,
-      _p = this._p;
+      _p = this._p,
+      name = this.name;
+  var targetName = name;
+  var toggleElems = Array.from(document.querySelectorAll("[href=\"#".concat(targetName, "\"],[data-target=\"#").concat(targetName, "\"]")));
 
-  _p.showTransitionFn = function () {
-    /**
-     * Checking if current height of elem not equal final height
-     */
-    if (_this4.elem.offsetHeight !== _this4.heightFinal) {
-      return;
-    }
+  var toggleListener = function toggleListener(e) {
+    e.preventDefault();
 
-    elem.removeEventListener(_p.transitionEvent, _p.showTransitionFn);
-    (0, _utils.removeClass)(elem, options['collapsingClass']);
-    (0, _utils.addClass)(elem, options['collapsedClass']);
-
-    if (options.clearHeightShown) {
-      elem.style.height = '';
-    }
-
-    _this4.showInProgress = false;
-    /**
-     *  Call listeners event SHOWN
-     */
-
-    elem.dispatchEvent(eventShown);
-    options.handlerShown();
+    _this.toggle();
   };
+
+  _p.toggleListener = toggleListener;
+  toggleElems.forEach(function (toggleElem) {
+    toggleElem.setAttribute(options.toggleData, isOpen);
+    toggleElem.addEventListener('click', toggleListener);
+  });
+  this.toggleElems = toggleElems;
 };
 
-WeberryCollapse.prototype.setHideTransitionFn = function () {
-  var _this5 = this;
+WeberryCollapse.prototype.toggleElemsSetState = function (state) {
+  var options = this.options,
+      toggleElems = this.toggleElems;
+  toggleElems.forEach(function (toggleElem) {
+    toggleElem.setAttribute(options.toggleData, state);
+  });
+};
 
-  var elem = this.elem,
-      options = this.options,
-      _p = this._p;
+WeberryCollapse.prototype.toggleElemsDestroy = function () {
+  var toggleElems = this.toggleElems,
+      _p = this._p,
+      options = this.options;
+  toggleElems.forEach(function (toggleElem) {
+    toggleElem.removeAttribute(options.toggleData);
+    toggleElem.removeEventListener('click', _p.toggleListener);
+  });
+}; //---------------------------------ANIMATE FUNCTIONS ------------------------------------
 
-  _p.hideTransitionFn = function () {
-    /**
-     * Checking if current height of elem not equal initial height
-     */
-    if (_this5.elem.offsetHeight !== _this5.heightInitial) {
-      return;
-    }
 
-    elem.removeEventListener(_p.transitionEvent, _p.hideTransitionFn);
-    (0, _utils.removeClass)(elem, options['collapsingClass']);
-    elem.style.height = '';
-    _this5.hideInProgress = false;
-    /**
-     *  Call listeners event HIDDEN
-     */
+WeberryCollapse.prototype.destroyAnimationShow = function () {
+  var animationShow = this.animationShow;
+  animationShow && animationShow.destroy && animationShow.destroy();
+};
 
-    elem.dispatchEvent(eventHidden);
-    options.handlerHidden();
-  };
+WeberryCollapse.prototype.destroyAnimationHide = function () {
+  var animationHide = this.animationHide;
+  animationHide && animationHide.destroy && animationHide.destroy();
 }; //---------------------------------CUSTOM EVENTS------------------------------------
 
 
@@ -431,14 +373,14 @@ var eventHide = new CustomEvent(eventMap.hide);
 var eventHidden = new CustomEvent(eventMap.hidden);
 
 WeberryCollapse.prototype.clearEvents = function () {
-  var _this6 = this;
+  var _this2 = this;
 
   var events = this._p.events;
   Object.keys(events).forEach(function (key) {
     var event = events[key].event;
     var fn = events[key].fn;
 
-    _this6.off(event, fn);
+    _this2.off(event, fn);
   });
   this._p.events = {};
   this._p.eventsTag = 0;
@@ -486,7 +428,7 @@ window.addEventListener('load', function () {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.whichTransitionEvent = exports.domById = exports.arrayByClass = exports.removeClass = exports.addClass = void 0;
+exports.transitionAnimate = exports.whichTransitionEvent = exports.domById = exports.arrayByClass = exports.removeClass = exports.addClass = void 0;
 
 var addClass = function addClass(elem, classname) {
   if (classname) {
@@ -542,5 +484,41 @@ var whichTransitionEvent = function whichTransitionEvent() {
 };
 
 exports.whichTransitionEvent = whichTransitionEvent;
+var transitionEvent = whichTransitionEvent();
+
+var transitionAnimate = function transitionAnimate(el, params) {
+  var animation = params.animation;
+
+  var onComplete = params.onComplete || function () {};
+
+  var beforeStart = params.beforeStart || function () {};
+
+  var immediately = params.immediately || false;
+  var timeout;
+
+  var transitionEndFn = function transitionEndFn(e) {
+    e.stopPropagation();
+    el.removeEventListener(transitionEvent, transitionEndFn);
+    onComplete();
+  };
+
+  beforeStart();
+  el.addEventListener(transitionEvent, transitionEndFn);
+
+  if (immediately) {
+    animation();
+  } else {
+    timeout = setTimeout(animation, 50);
+  }
+
+  return {
+    destroy: function destroy() {
+      clearTimeout(timeout);
+      el.removeEventListener(transitionEvent, transitionEndFn);
+    }
+  };
+};
+
+exports.transitionAnimate = transitionAnimate;
 
 },{}]},{},[2]);
