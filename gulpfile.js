@@ -26,6 +26,7 @@ const outputPath = 'dist';
 
 const paths = {
   scripts: {
+    entry: isProd ? './src/js/collapse.js' : './src/js/main.js',
     src: path.join(srcPath, 'js/**/*.js'),
     dest: path.join(outputPath, 'js')
   },
@@ -72,10 +73,11 @@ const styles = () => {
 
 const scripts = () => {
   const task = browserify({
-    entries: ['./src/js/main.js']
+    entries: [paths.scripts.entry],
+    standalone: 'WeberryCollapse'
   })
     .transform(babelify.configure({
-      presets: ['@babel/preset-env']
+      presets: ['@babel/preset-env'],
     }))
     .bundle()
     .pipe(source('collapse.js'))
