@@ -9,7 +9,6 @@ const babelify = require('babelify');
 const source = require('vinyl-source-stream');
 const buffer = require('vinyl-buffer');
 const autoprefixer = require('autoprefixer');
-const cssnano = require('cssnano');
 const postcss = require('gulp-postcss');
 const del = require('del');
 
@@ -60,14 +59,6 @@ const styles = () => {
       .pipe(browserSync.stream());
   }
   
-  if (isProd) {
-    task
-      .pipe(postcss([cssnano]))
-      .pipe(rename({baseName: 'collapse', extname: '.min.css'}))
-      .pipe(size({showFiles: true}))
-      .pipe(gulp.dest(paths.styles.dest));
-  }
-  
   return task;
 };
 
@@ -100,7 +91,7 @@ const scripts = () => {
   return task;
 };
 
-const build = gulp.series(clean, gulp.parallel(styles, scripts));
+const build = gulp.series(clean, gulp.parallel(isProd ? scripts : [styles, scripts]));
 
 const bsInit = () => {
   browserSync.init({

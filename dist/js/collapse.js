@@ -120,6 +120,8 @@ function () {
       this.clearEvents();
       this.toggleElemsDestroy();
       this.resetClassList();
+      elem.style.display = '';
+      elem.style.height = '';
       options.handlerDestroy(elem);
       delete elem.WeberryCollapse;
     }

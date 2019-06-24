@@ -119,6 +119,9 @@ class WeberryCollapse {
     this.toggleElemsDestroy();
     this.resetClassList();
     
+    elem.style.display = '';
+    elem.style.height = '';
+    
     options.handlerDestroy(elem);
     
     delete elem.WeberryCollapse;
@@ -178,6 +181,7 @@ class WeberryCollapse {
     this.toggleElemsSetState(true);
     
     this.elem.dispatchEvent(eventShow);
+    
     options.handlerShow();
     
     if (this.hideInProgress && elem.offsetHeight === this.heightInitial) {
@@ -202,6 +206,7 @@ class WeberryCollapse {
     this.toggleElemsSetState(false);
     
     elem.dispatchEvent(eventHide);
+    
     options.handlerHide();
     
     if (showInProgress && elem.offsetHeight === this.heightFinal) {
