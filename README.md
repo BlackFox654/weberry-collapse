@@ -56,7 +56,7 @@ __default:__ false
 ### clearHeightShown {Boolean}
 __default:__ true 
 
-### calcHeightShowFn {Boolean}
+### calcHeightShowFn {Function}
 
 Custom function to calculate height of collapsed elem.
 
