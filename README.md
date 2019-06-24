@@ -1,6 +1,6 @@
-####Simple collapse plugin to show or hide your content with css transitions
+#### Simple collapse plugin to show or hide your content with css transitions
 
-#How to use
+# How to use
 
 1. prepare HTML
 
@@ -28,18 +28,18 @@
         import WeberryCollapse from 'weberry-collapse';
         const collapse = new WeberryCollapse(document.getElementById('collapse'));
         
-##Methods
+## Methods
 
-###show 
+### show 
 Shows a collapsible element.
 
-###hide
+### hide
 Hides a collapsible element.
 
-###destroy
+### destroy
 Destroy collapse.
 
-##Options
+## Options
 
 ### collapsingClass {String}
 __default:__ 'is-collapsing'
